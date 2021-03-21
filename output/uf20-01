@@ -1,0 +1,21 @@
+[6 clausulas falsas] 7 44 47 64 73 88
+[lits] -19 10 17 9 -16 15 -14 13 -6 5 -4 1
+[4 clausulas falsas] 6 7 44 64
+[lits] 17 5 19 -16 15 13 10 9 -6 -4
+[5 clausulas falsas] 7 11 22 44 67
+[lits] -17 15 9 20 -16 13 -11 10 -8 -6 -4
+[7 clausulas falsas] 11 20 22 23 43 44 84
+[lits] -15 20 -17 13 -11 -16 -14 10 9 -8 -6 -4 2
+[6 clausulas falsas] 3 11 20 23 44 58
+[lits] -20 -15 13 19 -17 -16 -11 10 9 -8 7 -6 -4 2 1
+[4 clausulas falsas] 3 11 20 58
+[lits] -20 19 -17 -16 -15 -11 -8 7 -6 2 1
+[4 clausulas falsas] 11 20 49 58
+[lits] -11 -20 19 -17 16 -15 -8 -6 3 2 1
+[4 clausulas falsas] 11 58 78 86
+[lits] -20 -18 11 19 -17 -8 -6 3 1
+[2 clausulas falsas] 11 58
+[lits] -20 19 -17 -8 -6 1
+[1 clausulas falsas] 58
+[lits] -20 19 1
+SAT

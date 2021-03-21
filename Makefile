@@ -23,3 +23,12 @@ clean:
 
 run:
 	./bin/bin
+
+flat:
+	./bin/bin < input/flat75-90 >> generated/flat75-90; cmp --silent generated/flat75-90 output/flat75-90 && echo 'Success!' || echo 'Failure!'
+
+simples:
+	./bin/bin < input/simples >> generated/simples; cmp --silent generated/simples output/simples && echo 'Success!' || echo 'Failure!'
+
+uf:
+	./bin/bin < input/uf20-01 >> generated/uf20-01; cmp --silent generated/uf20-01 output/uf20-01 && echo 'Success!' || echo 'Failure!'

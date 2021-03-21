@@ -1,1 +1,14 @@
+# System files
 .DS_Store
+.vscode
+
+# Generated
+/generated/flat75-90
+/generated/simples
+/generated/uf20-01
+
+# Obj
+/obj/main.o
+
+# Bin
+/bin/bin
