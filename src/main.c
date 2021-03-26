@@ -157,5 +157,12 @@ int main() {
     }
   }
 
+  for (int i = 0; i < n_clausulas; i++) {
+    free(clausulas[i]);
+  }
+  
+  free(clausulas);
+  free(valores);
+
   return 0;
 }
