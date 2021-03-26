@@ -41,7 +41,7 @@ void verifica_satisfaz(
       int valor;
 
       // Se a clausula não tiver essa variavel pula para a proxima
-      if(variavel == 0){
+      if (variavel == 0){
         continue;
       }
 
