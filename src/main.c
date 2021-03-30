@@ -1,23 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-int abs(int num) {
-  if (num < 0) {
-    return num * -1;
-  }
-  return num;
-}
-
-int maior_num_vetor(int* array, int tamanho){
-  int idx_maior = 0;
-  for(int i=0; i < tamanho; i++){
-    if(abs(array[i]) >= abs(array[idx_maior])){
-      idx_maior = i;
-    }
-  }
-  return idx_maior;
-}
+#include <common.h>
 
 void verifica_satisfaz(
   int n_clausulas,
