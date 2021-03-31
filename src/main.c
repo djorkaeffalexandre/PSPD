@@ -1,152 +1,106 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <string.h>
-#include <common.h>
 
-void verifica_satisfaz(
-  int n_clausulas,
-  int n_variaveis,
-  int** clausulas,
-  int* valores
-) {
-  int contador = 0;
-  int clausula_satisfeita = 0;
-  int contador_clausulas_nao_satisfeitas = 0;
-  int contador_variaveis_nao_satisfeitas = 0;
+#define SHARED 1
+#define N_CONSUMERS 3
+#define N_PRODUCERS 1
 
-  // Index de cláusulas não satisfeitas
-  int* clausulas_nao_satisfeitas = (int*) calloc(n_clausulas, sizeof(int));
-  int* variaveis_nao_satisfeitas = (int*) calloc(n_variaveis, sizeof(int));
+#define BUFFER_LEN 3
 
-  for (int i = 0; i < n_clausulas; i++) {
-    int* variaveis_nao_satisfeitas_teste = (int*) calloc(n_variaveis, sizeof(int));
-    for (int j = 0; j < n_variaveis; j++) {
-      int variavel = clausulas[i][j];
-      int valor;
+void *Producer();
+void *Consumer();
 
-      // Se a clausula não tiver essa variavel pula para a proxima
-      if (variavel == 0){
-        continue;
-      }
+sem_t *empty, *full, *prod, *cons;
 
-      // Se a variável não for uma negação
-      // Terá o valor igual ao valor lido
-      if (variavel > 0) {
-        valor = valores[abs(variavel) - 1];
-      // Se a variável for uma negação
-      // iremos dar um flip
-      } else {
-        valor = valores[abs(variavel) - 1] * -1;
-      }
+int n_clausulas, n_variaveis;
+int* buffer[BUFFER_LEN];
+int i=0, f=0;
 
-      // Se o valor é verdadeiro
-      if (valor > 0) {
-        clausula_satisfeita = 1;
-      } else {
-        variaveis_nao_satisfeitas_teste[j]++;
-      }
-    }
-    if (clausula_satisfeita == 1) {
-      clausula_satisfeita = 0;
-      contador++;
-    } else {
-      clausulas_nao_satisfeitas[i] = 1;
-      contador_clausulas_nao_satisfeitas++;
-      for(int k=0; k < n_variaveis; k++){
-        int antes = variaveis_nao_satisfeitas[k];
-        variaveis_nao_satisfeitas[k] += variaveis_nao_satisfeitas_teste[k];
-        if(antes == 0 && variaveis_nao_satisfeitas[k] > 0){
-          contador_variaveis_nao_satisfeitas++;
-        }
-      }
-    }
+int main()
+{
+  pthread_t consumers[N_CONSUMERS], producers[N_PRODUCERS];
+
+  empty = sem_open("/empty", O_CREAT, 0644, BUFFER_LEN);
+  full = sem_open("/full", O_CREAT, 0644, 0);
+  prod = sem_open("/prod", O_CREAT, 0644, 1);
+  cons = sem_open("/cons", O_CREAT, 0644, 1);
+
+
+  scanf("%d", &n_clausulas);
+  scanf("%d", &n_variaveis);
+
+  for (int i = 0; i < N_PRODUCERS; i++) {
+    pthread_create(&producers[i], NULL, Producer, NULL);
   }
-  // A cláusula foi satisfeita
-  if (contador == n_clausulas) {
-    printf("SAT\n");
-  // A cláusula não foi satisfeita
-  } else {
-    // Imprime os índexes das cláusulas que não foram satisfeitas
-    printf("[%d clausulas falsas] ", contador_clausulas_nao_satisfeitas);
-    for (int i = 0; i < n_clausulas; i++) {
-      if (clausulas_nao_satisfeitas[i] == 1) {
-        printf("%d", i);
-        contador_clausulas_nao_satisfeitas--;
-        if (contador_clausulas_nao_satisfeitas > 0) {
-          printf(" ");
-        }
-      }
-    }
-    printf("\n");
-    // Print das variaveis
-    printf("[lits] ");
-    while(contador_variaveis_nao_satisfeitas > 0){
-      int idx = maior_num_vetor(variaveis_nao_satisfeitas, n_variaveis);
-      printf("%d", valores[idx] * -1);
-      variaveis_nao_satisfeitas[idx] = 0;
-      contador_variaveis_nao_satisfeitas--;
-      if (contador_variaveis_nao_satisfeitas > 0) {
-        printf(" ");
-      }
-    }
-    printf("\n");
+
+  for (int i = 0; i < N_CONSUMERS; i++) {
+    pthread_create(&consumers[i], NULL, Consumer, (void *)&i);
   }
+
+  for (int i = 0; i < N_PRODUCERS; i++) {
+    pthread_join(producers[i], NULL);
+  }
+
+  for (int i = 0; i < N_CONSUMERS; i++) {
+    pthread_join(consumers[i], NULL);
+  }
+
+  printf("\nMain done\n");
+  (void) sem_unlink("/empty");
+  (void) sem_unlink("/full");
+  (void) sem_unlink("/prod");
+  (void) sem_unlink("/cons");
 }
 
-int main() {
-  int n_variaveis, n_clausulas;
-  scanf("%d %d", &n_variaveis, &n_clausulas);
-
-  // int[clausula][variaveis]
-  int **clausulas = (int **) calloc(n_clausulas, sizeof(int*));
-
-  for(int i = 0; i < n_clausulas; i++) {
-    clausulas[i] = (int *) calloc(n_variaveis, sizeof(int));
-
-    int num;
-    do {
-      scanf("%d", &num);
-      if (num != 0) {
-        clausulas[i][abs(num) - 1] = num;
-      }
-    } while(num != 0);
-  }
-
+void *Producer()
+{
   char comando[4];
   int* valores = (int *) calloc(n_variaveis, sizeof(int));
-  while(scanf("%4s", comando) != EOF) {
-    if (strcmp(comando, "full") == 0) {
-      for (int i = 0; i < n_variaveis; i++) {
+  while(scanf("%4s", comando) != EOF)
+  {
+    if (strcmp(comando, "full") == 0)
+    {
+      for (int i = 0; i < n_variaveis; i++)
+      {
         int variavel;
         scanf("%d", &variavel);
         valores[i] = variavel;
       }
-      verifica_satisfaz(
-        n_clausulas,
-        n_variaveis,
-        clausulas,
-        valores
-      );
     }
-    if (strcmp(comando, "flip") == 0) {
+    if (strcmp(comando, "flip") == 0)
+    {
       int variavel;
       scanf("%d", &variavel);
       valores[abs(variavel) - 1] = valores[abs(variavel) - 1] * -1;
-      verifica_satisfaz(
-        n_clausulas,
-        n_variaveis,
-        clausulas,
-        valores
-      );
     }
+    sem_wait(empty);
+    sem_wait(prod);
+    f = (f + 1) % BUFFER_LEN;
+    buffer[f] = (int *) calloc(n_variaveis, sizeof(int));
+    memcpy(buffer[f], valores, sizeof(int) * n_variaveis);
+    // buffer[f] = valores;
+    sem_post(prod);
+    sem_post(full);
   }
 
-  for (int i = 0; i < n_clausulas; i++) {
-    free(clausulas[i]);
-  }
-  
-  free(clausulas);
-  free(valores);
+  return NULL;
+}
 
-  return 0;
+void *Consumer(void *no)
+{
+  while (1)
+  {
+    sem_wait(full);
+    sem_wait(cons);
+    i = (i + 1) % BUFFER_LEN;
+    int* valores = buffer[i];
+    sem_post(cons);
+    sem_post(empty);
+    printf("buffer %d: %d %d\n",idx, valores[0], valores[1]);
+  }
+
+  return NULL;
 }
