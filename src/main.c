@@ -2,13 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <common.h>
+#include <pthread.h>
 
-void verifica_satisfaz(
-  int n_clausulas,
-  int n_variaveis,
-  int** clausulas,
-  int* valores
-) {
+#define N_THREADS 3
+
+int questoes[5000][100000];
+
+int n_variaveis;
+int n_clausulas;
+int **clausulas;
+
+int aux = 0;
+
+void verifica_satisfaz(int* valores) {
   int contador = 0;
   int clausula_satisfeita = 0;
   int contador_clausulas_nao_satisfeitas = 0;
@@ -93,12 +99,22 @@ void verifica_satisfaz(
   }
 }
 
+void* processador(void* param) {
+  int index = (int) param;
+  Range range = calcula_range(index, aux, N_THREADS);
+  for (int i = range.inicio; i <= range.fim; i++) {
+    verifica_satisfaz(questoes[i]);
+  }
+  return NULL;
+}
+
 int main() {
-  int n_variaveis, n_clausulas;
+  pthread_t threads[N_THREADS];
+
   scanf("%d %d", &n_variaveis, &n_clausulas);
 
   // int[clausula][variaveis]
-  int **clausulas = (int **) calloc(n_clausulas, sizeof(int*));
+  clausulas = (int **) calloc(n_clausulas, sizeof(int*));
 
   for(int i = 0; i < n_clausulas; i++) {
     clausulas[i] = (int *) calloc(n_variaveis, sizeof(int));
@@ -121,24 +137,23 @@ int main() {
         scanf("%d", &variavel);
         valores[i] = variavel;
       }
-      verifica_satisfaz(
-        n_clausulas,
-        n_variaveis,
-        clausulas,
-        valores
-      );
+      memcpy(questoes[aux], valores, n_variaveis * sizeof(int));
     }
     if (strcmp(comando, "flip") == 0) {
       int variavel;
       scanf("%d", &variavel);
       valores[abs(variavel) - 1] = valores[abs(variavel) - 1] * -1;
-      verifica_satisfaz(
-        n_clausulas,
-        n_variaveis,
-        clausulas,
-        valores
-      );
+      memcpy(questoes[aux], valores, n_variaveis * sizeof(int));
     }
+    aux++;
+  }
+
+  for (int i = 0; i < N_THREADS; i++) {
+    pthread_create(&threads[i], NULL, processador, (void *)i);
+  }
+
+  for (int i = 0; i < N_THREADS; i++) {
+    pthread_join(threads[i], NULL); 
   }
 
   for (int i = 0; i < n_clausulas; i++) {
