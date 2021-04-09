@@ -48,7 +48,11 @@ void check(
       }
 
       if (value > 0) {
+        // Se encontramos um valor positivo a cláusula é verdadeira
+        // e portanto os valores negativos não importam mais
+        // então podemos ir para a próxima cláusula
         flag_clausula = true;
+        break;
       } else {
         #if LISTS
         valores_negativos_clausula.push_back(abs(base));
