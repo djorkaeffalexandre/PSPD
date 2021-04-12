@@ -28,7 +28,6 @@ void check(
   for (int i = 0; i < clausulas.size(); i++) {
     bool flag_clausula = false;
 
-    vector<int> valores_negativos_clausula;
     for (int j = 0; j < clausulas[i].size(); j++) {
       int base = clausulas[i][j];
       
@@ -43,10 +42,6 @@ void check(
         // então podemos ir para a próxima cláusula
         flag_clausula = true;
         break;
-      } else {
-        #if LISTS
-        valores_negativos_clausula.push_back(abs(base));
-        #endif
       }
     }
 
@@ -56,12 +51,17 @@ void check(
       flag_expressao = false;
       idx_clausulas_nao_satisfeitas.push_back(i);
       #if LISTS
-      for (int k = 0; k < valores_negativos_clausula.size(); k++) {
-        int base = valores_negativos_clausula[k];
-        if (valores_negativos[base - 1] == 0) {
+      for (int j = 0; j < clausulas[i].size(); j++) {
+        int base = clausulas[i][j];
+        int value = valores[abs(base) - 1];
+        if (base < 0) {
+          value *= 1;
+        }
+        int literal = abs(base);
+        if (valores_negativos[literal - 1] == 0) {
           n_valores_negativos += 1;
         }
-        valores_negativos[base - 1] += 1;
+        valores_negativos[literal - 1] += 1;
       }
       #endif
     }
@@ -95,7 +95,7 @@ void check(
     printf("[lits] ");
     #endif
     while (n_valores_negativos > 0) {
-      int max = distance(
+      int idx = distance(
         valores_negativos.begin(),
         max_element(
           valores_negativos.begin(),
@@ -105,8 +105,8 @@ void check(
           }
         )
       );
-      printf("%d", valores[max] * -1);
-      valores_negativos[max] = 0;
+      printf("%d", valores[idx] * -1);
+      valores_negativos[idx] = 0;
       n_valores_negativos--;
       if (n_valores_negativos > 0) {
         #if DEBUG
