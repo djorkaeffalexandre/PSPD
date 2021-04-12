@@ -125,8 +125,8 @@ void check(
 int main() {
   int n_variaveis, n_clausulas;
   
-  cin >> n_variaveis;
-  cin >> n_clausulas;
+  scanf("%d", &n_variaveis);
+  scanf("%d", &n_clausulas);
 
   vector<vector<int> > clausulas;
   vector<int> variaveis;
