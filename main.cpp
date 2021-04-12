@@ -106,6 +106,7 @@ void check(
     #endif
     while (n_valores_negativos > 0) {
       int idx = maior_num_vetor(valores_negativos, n_variaveis);
+      printf("%d", valores[idx] * -1);
       valores_negativos[idx] = 0;
       n_valores_negativos--;
       if (n_valores_negativos > 0) {
