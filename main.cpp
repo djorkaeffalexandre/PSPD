@@ -14,16 +14,6 @@
 
 using namespace std;
 
-int maior_num_vetor(vector<int> array, int tamanho) {
-  int idx_maior = 0;
-  for (int i = 0; i < tamanho; i++) {
-    if (abs(array[i]) >= abs(array[idx_maior])) {
-      idx_maior = i;
-    }
-  }
-  return idx_maior;
-}
-
 void check(
   int n_variaveis,
   int n_clausulas,
@@ -105,9 +95,18 @@ void check(
     printf("[lits] ");
     #endif
     while (n_valores_negativos > 0) {
-      int idx = maior_num_vetor(valores_negativos, n_variaveis);
-      printf("%d", valores[idx] * -1);
-      valores_negativos[idx] = 0;
+      int max = distance(
+        valores_negativos.begin(),
+        max_element(
+          valores_negativos.begin(),
+          valores_negativos.end(),
+          [](const int& a, const int& b) {
+            return abs(a) <= abs(b);
+          }
+        )
+      );
+      printf("%d", valores[max] * -1);
+      valores_negativos[max] = 0;
       n_valores_negativos--;
       if (n_valores_negativos > 0) {
         #if DEBUG
