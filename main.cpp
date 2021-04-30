@@ -7,13 +7,24 @@
 #include <unordered_set>
 #include <set>
 #include <iterator>
+#include <thread>
 
 #define LITS true
 #define PRINT true
+#define THREAD_NUM 4
 
-// g++ -std=c++17 -O2 main.cpp -o prog
-
+// g++ -std=c++17 -O2 -lpthread main.cpp -o prog
 using namespace std;
+
+typedef struct {
+  int inicio;
+  int fim;
+} Intervalo;
+
+typedef struct {
+  int idx;
+  int valor;
+} Aux;
 
 int n_variaveis, n_clausulas;
 vector<vector<int> > clausulas;
@@ -26,8 +37,10 @@ vector<bool> valores;
 
 void le_entrada();
 void le_comandos();
-void executa_full();
-void executa_flip();
+void full();
+void flip();
+void *executa_full(void *aux);
+void *executa_flip(void *aux);
 void imprime_resultado();
 
 bool compara(pair<int, int>& a, pair<int, int>& b) {
@@ -35,6 +48,15 @@ bool compara(pair<int, int>& a, pair<int, int>& b) {
     return abs(a.first) > abs(b.first);
   }
   return a.second > b.second;
+}
+
+Intervalo calcula_intervalo(int atual, int tamanho, int pedaco) {
+  int inicio = (tamanho * atual) / pedaco;
+  int fim = ((tamanho * (atual + 1)) / pedaco) - 1;
+  Intervalo intervalo;
+  intervalo.inicio = inicio;
+  intervalo.fim = fim;
+  return intervalo;
 }
 
 int main() {
@@ -74,27 +96,50 @@ void le_comandos() {
   char comando[4];
   while(scanf("%4s", comando) != EOF) {
     if (strcmp(comando, "full") == 0) {
-      executa_full();
+      full();
     }
     if (strcmp(comando, "flip") == 0) {
-      executa_flip();
+      flip();
     }
     imprime_resultado();
   }
 }
 
-void executa_full() {
+void full() {
+  // Zera resultados anteriores
   idx_clausulas_nao_satisfeitas.clear();
   #if LITS
   literais_falsos.clear();
   #endif
+
+  // Lê valores iniciais
   int valor;
   for (int i = 0; i < n_variaveis; i++) {
     scanf("%d", &valor);
     valores[abs(valor) - 1] = valor > 0 ? true : false;
   }
 
-  for (int i = 0; i < n_clausulas; i++) {
+  //Executa full em thread
+  pthread_t threads[THREAD_NUM];
+
+  for (int i = 0; i < THREAD_NUM; i++){
+    int *arg = (int *)malloc(sizeof(int *));
+    *arg = i;
+    pthread_create(&threads[i], NULL, executa_full, arg);
+  }
+
+  for (int i = 0; i < THREAD_NUM; i++) {
+    pthread_join(threads[i], NULL);
+  }
+}
+
+void* executa_full(void *aux) {
+  // Seleciona o intervalo a ser executado
+  int indice = *((int *)aux);
+  Intervalo intervalo = calcula_intervalo(indice, n_clausulas, THREAD_NUM);
+
+  // Executa o full dentro do intervalo da thread
+  for (int i = intervalo.inicio; i <= intervalo.fim; i++) {
     bool satisfaz = false;
     for (int j = 0; j < clausulas[i].size(); j++) {
       int base = clausulas[i][j];
@@ -118,14 +163,43 @@ void executa_full() {
       #endif
     }
   }
+  return NULL;
 }
 
-void executa_flip() {
+void flip() {
+  // Lê valores iniciais
   int valor;
   scanf("%d", &valor);
   valores[abs(valor) - 1] = !valores[abs(valor) - 1];
 
-  for (int i = 0; i < n_clausulas; i++) {
+  //Executa flip em thread
+  pthread_t threads[THREAD_NUM];
+
+  for (int i = 0; i < THREAD_NUM; i++) {
+    Aux *aux = (Aux *)malloc(sizeof(Aux *));
+    aux->idx = i;
+    aux->valor = valor;
+    // int *arg = (int *)malloc(sizeof(int *));
+    // *arg = i;
+    pthread_create(&threads[i], NULL, executa_flip, aux);
+  }
+
+  for (int i = 0; i < THREAD_NUM; i++) {
+    pthread_join(threads[i], NULL);
+  }
+}
+
+void *executa_flip(void *aux) {
+  // Pega variáveis recebidas
+  Aux data = *((Aux *)aux);
+  int valor = data.valor;
+  int indice = data.idx;
+
+  // Seleciona o intervalo a ser executado
+  Intervalo intervalo = calcula_intervalo(indice, n_clausulas, THREAD_NUM);
+
+  // Executa o flip dentro do intervalo da thread
+  for (int i = intervalo.inicio; i <= intervalo.fim; i++) {
     if (!l_clausulas[abs(valor) - 1][i]) {
       continue;
     }
@@ -172,6 +246,7 @@ void executa_flip() {
       }
     }
   }
+  return NULL;
 }
 
 void imprime_resultado() {
