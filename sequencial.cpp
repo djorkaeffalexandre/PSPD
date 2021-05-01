@@ -10,6 +10,7 @@
 
 #define LITS true
 #define PRINT true
+#define PRINT_RESULT true
 
 // g++ -std=c++17 -O2 main.cpp -o prog
 
@@ -79,7 +80,9 @@ void le_comandos() {
     if (strcmp(comando, "flip") == 0) {
       executa_flip();
     }
+    #if PRINT_RESULT
     imprime_resultado();
+    #endif
   }
 }
 
