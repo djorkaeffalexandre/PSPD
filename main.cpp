@@ -7,13 +7,22 @@
 #include <unordered_set>
 #include <set>
 #include <iterator>
+#include <semaphore.h>
+#include <pthread.h>
 
 #define LITS true
 #define PRINT true
 
-// g++ -std=c++17 -O2 main.cpp -o prog
+#define THREADS 4
+
+// g++ -std=c++17 -O2 -lpthread main.cpp -o prog
 
 using namespace std;
+
+typedef struct {
+  int inicio;
+  int fim;
+} Intervalo;
 
 int n_variaveis, n_clausulas;
 vector<vector<int> > clausulas;
@@ -23,12 +32,33 @@ unordered_set<int> idx_clausulas_nao_satisfeitas;
 vector<int> literais_falsos;
 #endif
 vector<bool> valores;
+vector<Intervalo> intervalos;
+
+// ==== THREADS ====
+int valorFlip = -1;
+bool rodando = true;
+bool ehFlip = false;
+sem_t semaforos_execucao[THREADS];
+sem_t semaforos_impressao[THREADS];
+pthread_t threads[THREADS];
+// =================
 
 void le_entrada();
 void le_comandos();
 void executa_full();
 void executa_flip();
 void imprime_resultado();
+void calcula_intervalos();
+void executa_comando(Intervalo intervalo);
+
+// ==== THREADS ====
+void inicia_threads();
+void inicia_semaforos();
+void finaliza_threads();
+void combina_threads();
+void destroi_semaforos();
+void executa_threads();
+// =================
 
 bool compara(pair<int, int>& a, pair<int, int>& b) {
   if (a.second == b.second) {
@@ -37,12 +67,55 @@ bool compara(pair<int, int>& a, pair<int, int>& b) {
   return a.second > b.second;
 }
 
+Intervalo calcula_intervalo(int atual, int tamanho, int pedaco) {
+  int inicio = (tamanho * atual) / pedaco;
+  int fim = ((tamanho * (atual + 1)) / pedaco) - 1;
+  Intervalo intervalo;
+  intervalo.inicio = inicio;
+  intervalo.fim = fim;
+  return intervalo;
+}
+
+// ==== THREADS ====
+void* thread(void* arg) {
+  int indice = *((int *) arg);
+
+  while (rodando) {
+    sem_wait(&semaforos_execucao[indice]);
+    if (rodando) {
+      Intervalo intervalo = intervalos[indice];
+      executa_comando(intervalo);
+      sem_post(&semaforos_impressao[indice]);
+    }
+  }
+
+  return NULL;
+}
+// =================
+
 int main() {
-  
+  // ==== THREADS ====
+  inicia_semaforos();
+  inicia_threads();
+  // =================
+
   le_entrada();
+  calcula_intervalos();
   le_comandos();
 
+  // ==== THREADS ====
+  combina_threads();
+  destroi_semaforos();
+  // =================
+
   return 0;
+}
+
+void calcula_intervalos() {
+  for (int i = 0; i < THREADS; i++) {
+    Intervalo intervalo = calcula_intervalo(i, n_clausulas, THREADS);
+    intervalos.push_back(intervalo);
+  }
 }
 
 void le_entrada() {
@@ -79,8 +152,12 @@ void le_comandos() {
     if (strcmp(comando, "flip") == 0) {
       executa_flip();
     }
+    for (int i = 0; i < THREADS; i++) {
+      sem_wait(&semaforos_impressao[i]);
+    }
     imprime_resultado();
   }
+  finaliza_threads();
 }
 
 void executa_full() {
@@ -94,30 +171,8 @@ void executa_full() {
     valores[abs(valor) - 1] = valor > 0 ? true : false;
   }
 
-  for (int i = 0; i < n_clausulas; i++) {
-    bool satisfaz = false;
-    for (int j = 0; j < clausulas[i].size(); j++) {
-      int base = clausulas[i][j];
-      int valor = valores[abs(base) - 1] ? base : base * -1;
-      
-      if (valor > 0) {
-        satisfaz = true;
-        break;
-      }
-    }
-    if (!satisfaz) {
-      idx_clausulas_nao_satisfeitas.insert(i);
-      #if LITS
-      for (int j = 0; j < clausulas[i].size(); j++) {
-        int base = clausulas[i][j];
-        int valor = valores[abs(base) - 1] ? base : base * -1;
-        if (valor < 0) {
-          literais_falsos[abs(base) - 1] += 1;
-        }
-      }
-      #endif
-    }
-  }
+  ehFlip = false;
+  executa_threads();
 }
 
 void executa_flip() {
@@ -125,9 +180,17 @@ void executa_flip() {
   scanf("%d", &valor);
   valores[abs(valor) - 1] = !valores[abs(valor) - 1];
 
-  for (int i = 0; i < n_clausulas; i++) {
-    if (!l_clausulas[abs(valor) - 1][i]) {
-      continue;
+  ehFlip = true;
+  valorFlip = valor;
+  executa_threads();
+}
+
+void executa_comando(Intervalo intervalo) {
+  for (int i = intervalo.inicio; i < intervalo.fim; i++) {
+    if (ehFlip) {
+      if (!l_clausulas[abs(valorFlip) - 1][i]) {
+        continue;
+      }
     }
     bool satisfaz = false;
     for (int j = 0; j < clausulas[i].size(); j++) {
@@ -141,24 +204,30 @@ void executa_flip() {
       }
     }
     if (satisfaz) {
-      if (idx_clausulas_nao_satisfeitas.find(i) != idx_clausulas_nao_satisfeitas.end()) {
-        #if LITS
-        for (int j = 0; j < clausulas[i].size(); j++) {
-          int base = clausulas[i][j];
-          bool flip = valores[abs(base) - 1];
-          if (abs(base) == valor) {
-            flip = !flip;
+      if (ehFlip) {
+        if (idx_clausulas_nao_satisfeitas.find(i) != idx_clausulas_nao_satisfeitas.end()) {
+          #if LITS
+          for (int j = 0; j < clausulas[i].size(); j++) {
+            int base = clausulas[i][j];
+            bool flip = valores[abs(base) - 1];
+            if (abs(base) == valorFlip) {
+              flip = !flip;
+            }
+            int valor = flip ? base : base * -1;
+            if (valor < 0) {
+              literais_falsos[abs(base) - 1] -= 1;
+            }
           }
-          int valor = flip ? base : base * -1;
-          if (valor < 0) {
-            literais_falsos[abs(base) - 1] -= 1;
-          }
+          #endif
+          idx_clausulas_nao_satisfeitas.erase(i);
         }
-        #endif
-        idx_clausulas_nao_satisfeitas.erase(i);
       }
     } else {
-      if (idx_clausulas_nao_satisfeitas.find(i) == idx_clausulas_nao_satisfeitas.end()) {
+      bool deveExecutar = true;
+      if (ehFlip) {
+        deveExecutar = idx_clausulas_nao_satisfeitas.find(i) == idx_clausulas_nao_satisfeitas.end();
+      }
+      if (deveExecutar) {
         idx_clausulas_nao_satisfeitas.insert(i);
         #if LITS
         for (int j = 0; j < clausulas[i].size(); j++) {
@@ -215,5 +284,48 @@ void imprime_resultado() {
     printf("\n");
     #endif
     #endif
+  }
+}
+
+// MARK: - Threads
+
+void inicia_semaforos() {
+  for (int i = 0; i < THREADS; i++) {
+    sem_init(&semaforos_execucao[i], 0, 0);
+    sem_init(&semaforos_impressao[i], 0, 0);
+  }
+}
+
+void destroi_semaforos() {
+  for (int i = 0; i < THREADS; i++) {
+    sem_destroy(&semaforos_execucao[i]);
+    sem_destroy(&semaforos_impressao[i]);
+  }
+}
+
+void inicia_threads() {
+  for (int i = 0; i < THREADS; i++) {
+    int* arg = (int*) malloc(sizeof(int*));
+    *arg = i;
+    pthread_create(&threads[i], NULL, thread, arg);
+  }
+}
+
+void combina_threads() {
+  for (int i = 0; i < THREADS; i++) {
+    pthread_join(threads[i], NULL);
+  }
+}
+
+void finaliza_threads() {
+  rodando = false;
+  for (int i = 0; i < THREADS; i++) {
+    sem_post(&semaforos_execucao[i]);
+  }
+}
+
+void executa_threads() {
+  for (int i = 0; i < THREADS; i++) {
+    sem_post(&semaforos_execucao[i]);
   }
 }
