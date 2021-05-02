@@ -34,16 +34,32 @@ make benchmark BENCHMARKBINARY=./prog
 
 ## Análise
 
-![variaveis]()
-![clausulas]()
+![variaveis](./img/tempoXvariaveis.png)
+![clausulas](./img/tempoXclausulas.png)
 
-1. Podemos observar que a execução sem prints é significamente mais rápida, considerando o alto gasto de realizar um operação de print. Operações de entrada e saída tem uma magnitude muito maior que operações simples de CPU.
 
-2. Ao enviar para `/dev/null` não está mais sendo executada as operações de IO, de forma que possui um comportamento similar a retirada dos prints.
+**O desempenho é modificado quando impressão é comentada?**
 
-3.  Como o desempenho é alterado rodando o programa com 2, 4, 6, 8 e 12 threads???
+Podemos observar que a execução sem prints é significamente mais rápida, considerando o alto gasto de realizar um operação de print. Operações de entrada e saída tem uma magnitude muito maior que operações simples de CPU.
 
-4. Os tempos da implementação paralela se tornam menores que a implementação padrão a partir de 2810 variáveis e 11683 cláusulas, ganhando da implementação sequencial em casos maiores que 9685 variáveis e 55850 cláusulas.
+**O desempenho é modificado quando o arquivo de saída é redirecionado para `/dev/null`?**
+
+Ao enviar para `/dev/null` não está mais sendo executada as operações de IO, de forma que possui um comportamento similar a retirada dos prints.
+
+**Como o desempenho é alterado rodando o programa com 2, 4, 6, 8 e 12 threads?**
+
+![variaveis](./img/paralelo_tempoXvariaveis.png)
+![clausulas](./img/paralelo_tempoXclausulas.png)
+
+O desempenho do programa ao mudar o número de threads não possui uma variação muito significativa, mas podemos perceber que para entradas extensas a solução que utiliza threads para paralelizar a valoração de cláusulas se torna mais eficaz que a solução sequencial.
+
+Conforme o número de threads aumenta podemos notar uma diminuição no tempo de verificação para entradas entre 150 e 200 variáveis, entretanto após esse intervalo o tempo para solução com um maior número de threads aumenta.
+
+O tempo não é altamente afetado quando o programa é executado utilizando mais threads devido ao gargalo do código estar sendo na função de impressão que é executada de forma sequencial, este gargalo foi encontrado ao longo da análise do código e suas execuções para a documentação.
+
+**A partir de qual tamanho de fórmula a paralelização faz diferença?**
+
+Os tempos da implementação paralela se tornam menores que a implementação padrão a partir de 2810 variáveis e 11683 cláusulas, ganhando da implementação sequencial em casos maiores que 9685 variáveis e 55850 cláusulas.
 
 ## Como é feita a otimização para paralelizar o algoritmo?
 
@@ -89,6 +105,11 @@ O tempo gasto para a leitura é muito baixo comparado com o tempo de execução,
 ![](./img/valoracaoXclausulas.png)
 
 Ao fazer a análise do tempo somente da valoração, descontando o tempo da leitura e sem o processamento para a impressão dos resultados, podemos perceber que o real gargalo do algoritmo está no momento da impressão, visto somente o processamento de valoração possui o tempo muito abaixo ao tempo do algoritmo completo.
+
+Para comprovar essa análise, foi feito um gráfico, com os tempos da solução sequencial sem os prints tirando o tempo da valoração e da leitura, dessa forma temos os gráficos abaixo que se assemelham a curvatura dos gráficos da solução completa, comprovando que essa função é o maior gargálo do algoritmo. 
+
+![variaveis](./img/impressao_tempoXvariaveis.png)
+![clausulas](./img/impressao_tempoXclausulas.png)
 
 **Qual é a complexidade do seu verificador?**
 
