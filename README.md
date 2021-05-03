@@ -15,21 +15,19 @@ Foi feito duas versões do código, uma paralela [(parallel.cpp)](./parallel.cpp
 Para compilar o programa sequencial:
 
 ```sh
-g++ -std=c++17 -O2 sequencial.cpp -o prog
-
+make sequencial
 ```
 
 Para compilar o programa paralelo:
 
 ```sh
-g++ -std=c++17 -O2 -lpthread parallel.cpp -o prog
-
+make parallel
 ```
 
 Rode o programa com:
 
 ```sh
-make benchmark BENCHMARKBINARY=./prog
+make benchmark BENCHMARKBINARY=./bin
 ```
 
 ## Análise

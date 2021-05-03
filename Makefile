@@ -17,6 +17,12 @@ BENCHMARKBINARY?=$(GSATGENERATOR)
 
 all: $(INPUT)
 
+sequencial:
+	g++ -std=c++17 -O2 sequencial.cpp -o bin
+
+parallel:
+	g++ -std=c++17 -O2 -lpthread parallel.cpp -o bin
+
 input/%: formulas/%.cnf
 	./simple-gsat-io-generator generator $(DEFAULTSEED) $^ $@ $(patsubst input/%,output/%,$@) $(TIMELIMIT)
 
